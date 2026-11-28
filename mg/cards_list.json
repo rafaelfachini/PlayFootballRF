@@ -1,0 +1,23 @@
+[
+ {"id":"a_money","part":"A","start":59.6,"dur":10.2,"p":{"type":"A.money","usd":220,"t2":7.0}},
+ {"id":"b_lusail","part":"B","start":9.0,"dur":4.8,"p":{"type":"A.title","num":"#1","name":"LUSAIL","count":88966,"unit":"LUGARES","sub":"O MAIOR DO CATAR"}},
+ {"id":"b_finalissima","part":"B","start":74.6,"dur":5.4,"p":{"type":"B.alert","head":"FINALÍSSIMA","big":"ARG x ESP","sub":"MESSI x LAMINE YAMAL • LUSAIL","banner":"JOGO CANCELADO","tBanner":3.0,"ticker":"GUERRA NO ORIENTE MÉDIO CHEGA AO CATAR   •   UEFA CANCELA A FINALÍSSIMA   •   "}},
+ {"id":"b_albayt_lower","part":"B","start":80.0,"dur":5.6,"alpha":true,"p":{"type":"A.lower","num":"#2","name":"AL BAYT","sub":"A TENDA BEDUÍNA • ONDE A COPA COMEÇOU"}},
+ {"id":"c_cadeiras","part":"C","start":4.2,"dur":5.6,"p":{"type":"B.counter","head":"PROMESSA DO CATAR","n":170000,"label":"CADEIRAS","sub":"DOADAS PARA OUTROS PAÍSES"}},
+ {"id":"c_albayt_vs","part":"C","start":26.4,"dur":7.4,"p":{"type":"A.vs","title":"AL BAYT","lbig":"32 MIL","lsub":"LUGARES + HOTEL 5 ESTRELAS","rnum":61475,"rsub":"CATAR x PALESTINA • COPA ÁRABE 2025","stamp":"NO PAPEL"}},
+ {"id":"c_ahmad_lower","part":"C","start":46.5,"dur":5.5,"alpha":true,"p":{"type":"A.lower","num":"#3","name":"AHMAD BIN ALI","sub":"COM GOSTO DE FLAMENGO"}},
+ {"id":"c_ahmad_vs","part":"C","start":77.5,"dur":7.2,"p":{"type":"B.vs","title":"AHMAD BIN ALI","ln":21000,"ls":"LUGARES (PLANO OFICIAL)","rn":42150,"rs":"FLAMENGO x PSG • INTERCONTINENTAL 2025","banner":"NÃO CABE NEM METADE","tBanner":4.0}},
+ {"id":"c_educ_lower","part":"C","start":88.7,"dur":5.6,"alpha":true,"p":{"type":"A.lower","num":"#4","name":"CIDADE DA EDUCAÇÃO","sub":"O DIAMANTE DO DESERTO"}},
+ {"id":"d_placares","part":"D","start":13.0,"dur":8.6,"p":{"type":"B.scores","title":"PESADELO NO DIAMANTE","rowT":[0.2,0.6,5.6],"rows":[["PALMEIRAS","0","1","TIGRES","MUNDIAL DE CLUBES 2021 • SEMIFINAL"],["PALMEIRAS","0","0","AL AHLY","MUNDIAL 2021 • 3º LUGAR • AL AHLY 3 x 2 NOS PÊNALTIS"],["CROÁCIA","1","1","BRASIL","COPA 2022 • QUARTAS • CROÁCIA 4 x 2 NOS PÊNALTIS"]]}},
+ {"id":"d_educ_vs","part":"D","start":45.4,"dur":7.4,"p":{"type":"A.vs","title":"CIDADE DA EDUCAÇÃO","lbig":"25 MIL","lsub":"LUGARES PARA OS ESTUDANTES","rnum":43486,"rsub":"JORDÂNIA x IRAQUE • COPA ÁRABE 2025","stamp":"NÃO CABE"}},
+ {"id":"d_khalifa_lower","part":"D","start":59.6,"dur":6.0,"alpha":true,"p":{"type":"A.lower","num":"#5","name":"KHALIFA INTERNACIONAL","sub":"O VOVÔ DA COPA • 1976 • VIVO"}},
+ {"id":"d_6e7_lower","part":"D","start":99.9,"dur":6.2,"alpha":true,"p":{"type":"A.lower","num":"#6/7","name":"AL JANOUB E AL THUMAMA","sub":"OS MAIS SILENCIOSOS"}},
+ {"id":"e_liga","part":"E","start":46.8,"dur":6.8,"p":{"type":"B.fill","title":"LIGA DO CATAR","n":5000,"cap":40000,"nLabel":"MÉDIA POR JOGO","capLabel":"CAPACIDADE","banner":"~5 MIL EM ESTÁDIOS DE 40 MIL","tBanner":3.6}},
+ {"id":"e_974","part":"E","start":67.3,"dur":4.7,"p":{"type":"A.title","num":"#8","name":"974","line":"O ÚLTIMO DA LISTA","sub":"O ESTÁDIO DE CONTÊINERES"}},
+ {"id":"f_omacomores","part":"F","start":20.9,"dur":7.1,"p":{"type":"B.fill","title":"OMÃ x COMORES • COPA ÁRABE 2025","n":9348,"cap":44000,"nLabel":"PÚBLICO","capLabel":"CAPACIDADE"}},
+ {"id":"f_974_status","part":"F","start":28.0,"dur":5.9,"p":{"type":"A.status","head":"974","rows":[["CONTÊINERES:","974",null],["PROMESSA:","DESMONTAR","x"],["REALIDADE:","CONTINUA DE PÉ","ok"]]}},
+ {"id":"f_checklist","part":"F","start":68.6,"dur":7.0,"p":{"type":"B.checklist","title":"O PLANO PÓS-COPA","step":0.35,"rows":[["LUSAIL","NO PAPEL",false],["AL BAYT","NO PAPEL",false],["AHMAD BIN ALI","NO PAPEL",false],["CID. DA EDUCAÇÃO","NO PAPEL",false],["KHALIFA","SEGUE VIVO",true],["AL JANOUB","NÃO CONFIRMADO",false],["AL THUMAMA","NÃO CONFIRMADO",false],["974","NO PAPEL",false]]}},
+ {"id":"f_vitrine","part":"F","start":91.2,"dur":6.57,"p":{"type":"A.quote","lines":["NÃO É CEMITÉRIO.","É VITRINE."],"delays":[0.3,2.4]}},
+ {"id":"g_cta","part":"G","start":2.0,"dur":9.8,"p":{"type":"B.cta","q1":"O CATAR QUEBROU A PROMESSA","q2":"OU FOI ESPERTO?","tPulse":7.6}},
+ {"id":"g_subscribe","part":"G","start":11.8,"dur":8.4,"alpha":true,"p":{"type":"A.subscribe","tSub":2.1,"tLike":3.6,"tBell":4.95}}
+]

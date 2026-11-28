@@ -1,0 +1,361 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'Anton';src:url(fonts/Anton-Regular.ttf)}
+@font-face{font-family:'Bebas Neue';src:url(fonts/BebasNeue-Regular.ttf)}
+@font-face{font-family:'Archivo Black';src:url(fonts/ArchivoBlack-Regular.ttf)}
+html,body{margin:0;background:transparent}canvas{display:block}
+</style></head><body><canvas id="c"></canvas>
+<script src="common.js"></script>
+<script>
+// Card library — Play Football RF standard: Model A ("Quadra") + Model B ("Placar").
+// Usage: cards.html#{"type":"A.title","dur":5,...}
+const P = JSON.parse(decodeURIComponent(location.hash.slice(1) || '{"type":"A.title","dur":5}'));
+const woodA = makeWood(W + 300, H + 300, P.seed || 11);
+const woodB = makeWood(W, 260, 5);
+
+/* ============================ MODEL A — QUADRA ============================ */
+function bgA(t, dur, dark = 0) {
+  const z = 1 + t / dur * .05;
+  ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.drawImage(woodA, -W / 2 - 150 - t * 6, -H / 2 - 150); ctx.restore();
+  if (dark) { ctx.fillStyle = `rgba(0,0,0,${dark})`; ctx.fillRect(0, 0, W, H); }
+}
+function courtLines(k, cx = 1500, a = 1) {
+  ctx.save(); ctx.globalAlpha = .85 * a; ctx.strokeStyle = C.white; ctx.lineWidth = 10;
+  const L = 2600; ctx.setLineDash([L * k, L]);
+  ctx.beginPath(); ctx.arc(cx, 540, 330, -Math.PI / 2, Math.PI * 1.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, -20); ctx.lineTo(cx, 1100); ctx.stroke();
+  ctx.setLineDash([]); ctx.globalAlpha = a * E.out(prog(k, .6, 1));
+  ctx.fillStyle = C.white; ctx.beginPath(); ctx.arc(cx, 540, 16, 0, 7); ctx.fill(); ctx.restore();
+}
+function wipeOutA(t, dur) {
+  const k = E.inOut(prog(t, dur - .45, dur)); if (k <= 0) return; ctx.fillStyle = C.black;
+  ctx.beginPath(); ctx.moveTo(-200, H); ctx.lineTo(-200 + k * 2600, H); ctx.lineTo(-200 + k * 2600 + 400, 0); ctx.lineTo(-200, 0); ctx.fill();
+}
+function wipeInA(t) {
+  const k = E.inOut(prog(t, 0, .45)); if (k >= 1) return; ctx.fillStyle = C.black;
+  ctx.beginPath(); ctx.moveTo(-200 + k * 2600, H); ctx.lineTo(2400, H); ctx.lineTo(2400, 0); ctx.lineTo(-200 + k * 2600 + 400, 0); ctx.fill();
+}
+function stampA(s, x, y, k, kMark, type = 'x', rot = -.08, w = 520) {
+  if (k <= 0) return;
+  const sc = lerp(2.4, 1, E.out5(k));
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(sc, sc); ctx.globalAlpha = clamp(k * 3);
+  ctx.strokeStyle = C.white; ctx.lineWidth = 8; ctx.strokeRect(-w / 2, -70, w, 140);
+  mark(type, -w / 2 + 85, 0, 90, kMark, C.white, 14);
+  txt(s, 50, 30, { size: 88, align: 'center' }); ctx.restore();
+}
+
+const A = {
+  bg(t, dur) { bgA(t, dur, .45); vignette(.8); },
+  // full-screen stadium title
+  title(t, dur) {
+    bgA(t, dur, .15); courtLines(E.inOut(prog(t, .2, 1.6))); vignette(.7);
+    const kn = E.back(prog(t, .3, .9));
+    ctx.save(); ctx.translate(250, 640); ctx.scale(kn, kn);
+    txt(P.num, 0, 0, { size: P.num.length > 2 ? 360 : 440, color: null, stroke: C.white, lw: 6, align: 'center', alpha: .9 }); ctx.restore();
+    const ns = P.nameSize || 240;
+    maskUp(P.name, 520, 560, prog(t, .5, 1.1), { size: ns, ls: 6, shadow: 'rgba(0,0,0,.6)' });
+    if (P.count || P.line) {
+      const ks = E.out5(prog(t, .9, 1.5));
+      ctx.fillStyle = C.black; ctx.fillRect(490, 610, ks * 900, 120);
+      ctx.fillStyle = C.brownLight; ctx.fillRect(490, 610, 14, 120 * ks);
+      ctx.save(); ctx.beginPath(); ctx.rect(490, 610, ks * 900, 120); ctx.clip();
+      if (P.count) {
+        txt(fmt(P.count * E.out(prog(t, 1.1, 2.4))), 520, 700, { size: 92 });
+        txt(P.unit || '', 520 + measure(fmt(P.count), { size: 92 }) + 24, 698, { size: 70, font: 'Bebas Neue', ls: 4, color: C.offwhite });
+      } else txt(P.line, 520, 700, { size: 80, font: 'Bebas Neue', ls: 6 });
+      ctx.restore();
+    }
+    if (P.sub) maskUp(P.sub, 524, 800, prog(t, 1.4, 1.9), { size: 64, font: 'Bebas Neue', ls: 10 });
+    if (P.status) stampA(P.status, 1500, 860, prog(t, 2, 2.4), E.out(prog(t, 2.2, 2.6)), 'ok', -.06, 440);
+    grain(t); if (!P.noOut) wipeOutA(t, dur);
+  },
+  // transparent lower-third over footage
+  lower(t, dur) {
+    const kin = E.out5(prog(t, 0, .5)), kout = E.in(prog(t, dur - .4, dur));
+    const x = 90 - kout * 1500, y = 800;
+    const nw = 210, w = Math.max(measure(P.name, { size: 110, ls: 4 }), measure(P.sub || '', { size: 46, font: 'Bebas Neue', ls: 8 })) + 80;
+    ctx.save(); ctx.translate(x, 0);
+    // number block (brown parquet)
+    ctx.save(); ctx.beginPath(); ctx.rect(0, y - 150, nw * kin, 220); ctx.clip();
+    ctx.drawImage(woodA, -200, -200 + 300); ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(0, y - 150, nw, 220);
+    txt(P.num, nw / 2, y + 30, { size: P.num.length > 2 ? 110 : 150, align: 'center', color: C.white });
+    ctx.restore();
+    const kb = E.out5(prog(t, .25, .8));
+    ctx.fillStyle = C.black; ctx.fillRect(nw, y - 150, w * kb, 150);
+    ctx.fillStyle = C.white; ctx.fillRect(nw, y, w * kb, 70);
+    ctx.save(); ctx.beginPath(); ctx.rect(nw, y - 150, w * kb, 220); ctx.clip();
+    maskUp(P.name, nw + 40, y - 30, prog(t, .45, .95), { size: 110, ls: 4 });
+    if (P.sub) txt(P.sub, nw + 40, y + 52, { size: 46, font: 'Bebas Neue', ls: 8, color: C.black, alpha: E.out(prog(t, .7, 1)) });
+    ctx.restore(); ctx.restore();
+  },
+  money(t, dur) {
+    bgA(t, dur, .35); vignette(.85); wipeInA(t);
+    const k = E.out(prog(t, .4, 2.2));
+    txt('US$', 262, 420, { size: 100, font: 'Bebas Neue', ls: 6, alpha: E.out(prog(t, .4, .8)), color: C.offwhite });
+    txt(String(Math.round(P.usd * k)), 250, 760, { size: 380, ls: 4, shadow: 'rgba(0,0,0,.6)' });
+    maskUp('BILHÕES', 262, 860, prog(t, .9, 1.4), { size: 110, font: 'Bebas Neue', ls: 14 });
+    txt('(ESTIMATIVA)', 266, 920, { size: 40, font: 'Bebas Neue', ls: 8, color: C.offwhite, alpha: E.out(prog(t, 1.3, 1.8)) });
+    const bx = 1060, by1 = 470, by2 = 680, unit = 48, t2 = P.t2 || 5.4;
+    const kb1 = E.out(prog(t, t2 - .5, t2)), kb2 = E.out5(prog(t, t2, t2 + 1.4));
+    txt('BRASIL • COPA 2014', bx, by1 - 20, { size: 46, font: 'Bebas Neue', ls: 6, alpha: kb1, color: C.offwhite });
+    ctx.fillStyle = C.white; ctx.globalAlpha = kb1; ctx.fillRect(bx, by1, unit * kb1, 90); ctx.globalAlpha = 1;
+    txt('CATAR • COPA 2022', bx, by2 - 20, { size: 46, font: 'Bebas Neue', ls: 6, alpha: kb1, color: C.offwhite });
+    ctx.fillStyle = C.black; ctx.fillRect(bx, by2, unit * 15 * kb2, 90);
+    ctx.strokeStyle = C.white; ctx.lineWidth = 3; if (kb2 > 0) ctx.strokeRect(bx, by2, unit * 15 * kb2, 90);
+    for (let i = 1; i < 15 * kb2; i++) { ctx.fillStyle = 'rgba(246,242,234,.25)'; ctx.fillRect(bx + i * unit, by2 + 10, 2, 70); }
+    const kx = E.back(prog(t, t2 + 1.3, t2 + 1.8));
+    ctx.save(); ctx.translate(bx + unit * 15 - 160, by2 + 230); ctx.scale(kx, kx); ctx.rotate(-.06);
+    ctx.fillStyle = C.white; ctx.fillRect(-150, -80, 300, 120); txt('~15x', 0, 22, { size: 100, align: 'center', color: C.black }); ctx.restore();
+    grain(t); wipeOutA(t, dur);
+  },
+  // promise vs reality split
+  vs(t, dur) {
+    bgA(t, dur, .1);
+    const ks = E.inOut(prog(t, 0, .6));
+    ctx.fillStyle = C.black; ctx.fillRect(0, 0, W / 2 * ks, H);
+    ctx.fillStyle = C.white; ctx.fillRect(W / 2 * ks - 6, 0, 12, H); vignette(.5);
+    const ka = E.out(prog(t, .3, .7));
+    if (P.title) { const tw = measure(P.title, { size: 70, font: 'Bebas Neue', ls: 18 }) + 80;
+      ctx.globalAlpha = ka; ctx.fillStyle = C.white; ctx.fillRect(W / 2 - tw / 2, 60, tw, 90); ctx.globalAlpha = 1;
+      txt(P.title, W / 2 + 9, 130, { size: 70, font: 'Bebas Neue', ls: 18, align: 'center', color: C.black, alpha: ka }); }
+    maskUp('PROMESSA', W / 4, 300, prog(t, .5, 1), { size: 130, align: 'center', color: C.offwhite });
+    maskUp(P.lbig, W / 4, 560, prog(t, .8, 1.3), { size: 220, align: 'center' });
+    maskUp(P.lsub, W / 4, 650, prog(t, 1, 1.5), { size: 54, font: 'Bebas Neue', ls: 6, align: 'center', color: C.offwhite });
+    maskUp('REALIDADE', W * 3 / 4, 300, prog(t, 1.5, 2), { size: 130, align: 'center' });
+    txt(fmt(P.rnum * E.out(prog(t, 1.8, 3.2))), W * 3 / 4, 560, { size: 220, align: 'center', alpha: E.out(prog(t, 1.8, 2.1)), shadow: 'rgba(0,0,0,.7)' });
+    maskUp(P.rsub, W * 3 / 4, 650, prog(t, 2, 2.5), { size: 54, font: 'Bebas Neue', ls: 6, align: 'center' });
+    stampA(P.stamp || 'NO PAPEL', W / 4, 850, prog(t, 3.2, 3.6), E.out(prog(t, 3.4, 3.8)));
+    grain(t); wipeOutA(t, dur);
+  },
+  // status list (974)
+  status(t, dur) {
+    bgA(t, dur, .2); courtLines(E.inOut(prog(t, .1, 1.4)), 1560); vignette(.75); wipeInA(t);
+    maskUp(P.head, 160, 330, prog(t, .3, .8), { size: 230, ls: 4, shadow: 'rgba(0,0,0,.6)' });
+    P.rows.forEach(([a, b, m], i) => {
+      const t0 = .9 + i * .55, k = E.out5(prog(t, t0, t0 + .5)), y = 470 + i * 150;
+      ctx.fillStyle = C.black; ctx.fillRect(150, y, 1180 * k, 120);
+      ctx.fillStyle = m === 'ok' ? C.white : C.brownLight; ctx.fillRect(150, y, 14, 120 * k);
+      ctx.save(); ctx.beginPath(); ctx.rect(150, y, 1180 * k, 120); ctx.clip();
+      txt(a, 200, y + 82, { size: 54, font: 'Bebas Neue', ls: 6, color: C.offwhite });
+      txt(b, 200 + measure(a, { size: 54, font: 'Bebas Neue', ls: 6 }) + 26, y + 86, { size: 74 });
+      ctx.restore();
+      if (m) mark(m, 1260, y + 60, 70, E.out(prog(t, t0 + .4, t0 + .8)), C.white, 12);
+    });
+    grain(t); wipeOutA(t, dur);
+  },
+  quote(t, dur) {
+    bgA(t, dur, .3); courtLines(E.inOut(prog(t, 0, 1.6)), W / 2, .35); vignette(.85); wipeInA(t);
+    P.lines.forEach((s, i) => maskUp(s, W / 2, 470 + i * 230, prog(t, (P.delays||[.4,1.2])[i], (P.delays||[.4,1.2])[i] + .5), { size: i ? 240 : 150, align: 'center', color: i ? C.white : C.offwhite, ls: 4, shadow: 'rgba(0,0,0,.6)' }));
+    const k = E.out5(prog(t, (P.delays||[.4,1.2])[1] + .6, (P.delays||[.4,1.2])[1] + 1.2)); ctx.fillStyle = C.white; ctx.fillRect(W / 2 - 400 * k, 800, 800 * k, 10);
+    grain(t); wipeOutA(t, dur);
+  },
+  // transparent subscribe overlay
+  subscribe(t, dur) {
+    const k = E.back(prog(t, .1, .6)), kout = E.in(prog(t, dur - .4, dur));
+    const x = W / 2, y = 900 + kout * 400;
+    ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
+    const tL = P.tLike ?? 1.6, tS = P.tSub ?? 2.6, tB = P.tBell ?? 3.5;
+    const pressed = t > tL, sub = t > tS, bell = t > tB;
+    ctx.strokeStyle = C.white; ctx.lineWidth = 4;
+    ctx.fillStyle = pressed ? C.white : C.black; rrect(-610, -65, 200, 130, 65); ctx.fill(); ctx.stroke();
+    txt('LIKE', -510, 22, { size: 64, align: 'center', color: pressed ? C.black : C.white });
+    ctx.fillStyle = sub ? C.brownMid : C.black; rrect(-370, -65, 560, 130, 65); ctx.fill(); ctx.stroke();
+    txt(sub ? 'INSCRITO' : 'INSCREVA-SE', -90, 24, { size: 72, align: 'center' });
+    const sw = bell ? Math.sin((t - tB) * 22) * Math.exp(-(t - tB) * 3) * .5 : 0;
+    ctx.save(); ctx.translate(320, 0); ctx.rotate(sw);
+    ctx.fillStyle = bell ? C.white : C.black; ctx.beginPath(); ctx.arc(0, 0, 65, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = bell ? C.black : C.white;
+    ctx.beginPath(); ctx.moveTo(-30, 22); ctx.quadraticCurveTo(-28, -38, 0, -38); ctx.quadraticCurveTo(28, -38, 30, 22); ctx.closePath(); ctx.fill();
+    ctx.fillRect(-38, 18, 76, 10); ctx.beginPath(); ctx.arc(0, 36, 9, 0, 7); ctx.fill(); ctx.restore();
+    // cursor visits buttons in the order they are pressed
+    const ev = [[tL, -510], [tS, -90], [tB, 320]].sort((a, b) => a[0] - b[0]);
+    const pts = [[-200, 220, Math.max(.8, ev[0][0] - .9)], ...ev.map(e => [e[1], 20, e[0]])];
+    let cx = pts[0][0], cy = pts[0][1];
+    for (let i = 1; i < pts.length; i++) {
+      const a = Math.max(pts[i - 1][2], pts[i][2] - .7), f = E.inOut(prog(t, a, pts[i][2]));
+      if (t >= a) { cx = lerp(pts[i - 1][0], pts[i][0], f); cy = lerp(pts[i - 1][1], pts[i][1], f); }
+    }
+    if (t > pts[0][2] - .3 && t < tB + .8) {
+      ctx.fillStyle = C.white; ctx.strokeStyle = C.black; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + 56); ctx.lineTo(cx + 14, cy + 43); ctx.lineTo(cx + 26, cy + 68); ctx.lineTo(cx + 35, cy + 63); ctx.lineTo(cx + 23, cy + 39); ctx.lineTo(cx + 42, cy + 39); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  },
+};
+
+/* ============================ MODEL B — PLACAR ============================ */
+const [dotC, dotG] = mk(600, 240);
+function led(s, x, y, o = {}) {
+  const cell = o.cell || 10, size = o.size || 200, k = o.k ?? 1;
+  dotG.setTransform(1, 0, 0, 1, 0, 0); dotG.clearRect(0, 0, 600, 240);
+  dotG.font = `${size / cell}px ${o.font || 'Anton'}`; dotG.letterSpacing = ((o.ls || 0) / cell) + 'px';
+  const w = Math.min(600, Math.ceil(dotG.measureText(s).width) + 2), h = Math.ceil(size / cell * 1.25);
+  dotG.fillStyle = '#fff'; dotG.fillText(s, 1, Math.round(size / cell));
+  const id = dotG.getImageData(0, 0, w, h).data;
+  const ox = o.align === 'center' ? x - w * cell / 2 : o.align === 'right' ? x - w * cell : x, oy = y - size;
+  const r = rng(99);
+  ctx.save(); ctx.shadowColor = 'rgba(255,240,220,.55)'; ctx.shadowBlur = 14; ctx.fillStyle = o.color || C.white;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    if (id[(j * w + i) * 4 + 3] > 110 && (k >= 1 || r() < k * 1.15)) { ctx.beginPath(); ctx.arc(ox + i * cell + cell / 2, oy + j * cell + cell / 2, cell * .38, 0, 7); ctx.fill(); }
+  }
+  ctx.restore(); return w * cell;
+}
+function frameB() {
+  ctx.fillStyle = C.black; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(90,54,34,.28)';
+  for (let y = 95; y < H - 95; y += 14) for (let x = 95; x < W - 95; x += 14) ctx.fillRect(x, y, 3, 3);
+  const p = ctx.createPattern(woodB, 'repeat'); ctx.fillStyle = p;
+  ctx.fillRect(0, 0, W, 70); ctx.fillRect(0, H - 70, W, 70); ctx.fillRect(0, 0, 70, H); ctx.fillRect(W - 70, 0, 70, H);
+  ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 6; ctx.strokeRect(70, 70, W - 140, H - 140);
+  ctx.strokeStyle = 'rgba(246,242,234,.12)'; ctx.lineWidth = 2; ctx.strokeRect(78, 78, W - 156, H - 156);
+}
+function panel(x, y, w, h, k) {
+  ctx.save(); ctx.globalAlpha = E.out(k); ctx.fillStyle = 'rgba(36,20,11,.9)'; rrect(x, y, w, h * E.out5(k), 14); ctx.fill();
+  ctx.strokeStyle = C.brownLight; ctx.lineWidth = 3; ctx.stroke(); ctx.restore();
+}
+function odo(n, x, y, size, k, o = {}) {
+  const s = typeof n === 'string' ? n : fmt(n); const dw = measure('0', { size }) + 6;
+  let cx = x - (o.align === 'center' ? [...s].reduce((a, ch) => a + (/\d/.test(ch) ? dw : dw * .45), 0) / 2 : 0);
+  [...s].forEach((ch, i) => {
+    if (!/\d/.test(ch)) { txt(ch, cx, y, { size }); cx += dw * .45; return; }
+    const kk = E.out5(clamp(k * 1.4 - i * .06)), roll = Number(ch) + (1 - kk) * (10 + i * 3);
+    ctx.save(); ctx.beginPath(); ctx.rect(cx - 4, y - size * 1.02, dw, size * 1.2); ctx.clip();
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(cx - 4, y - size * 1.02, dw - 4, size * 1.2);
+    for (let q = Math.floor(roll) - 1; q <= Math.floor(roll) + 1; q++) txt(String(((q % 10) + 10) % 10), cx + dw / 2 - 5, y + (q - roll) * size * 1.15, { size, align: 'center' });
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(cx - 4, y - size * .42, dw - 4, 3); ctx.restore(); cx += dw;
+  });
+}
+function flashOut(t, dur) { const k = prog(t, dur - .3, dur); if (k > 0) { ctx.fillStyle = `rgba(0,0,0,${k})`; ctx.fillRect(0, 0, W, H); } }
+function ticker(msg, t, t0, y = 905, bg = C.white, fg = C.black) {
+  const tk = prog(t, t0, t0 + .3); if (tk <= 0) return;
+  ctx.save(); ctx.globalAlpha = tk; ctx.fillStyle = bg; ctx.fillRect(70, y, W - 140, 74);
+  ctx.beginPath(); ctx.rect(70, y, W - 140, 74); ctx.clip();
+  const mw = measure(msg, { size: 58, font: 'Bebas Neue', ls: 6 }); const off = -((t - t0) * 260) % mw;
+  for (let i = 0; i < 4; i++) txt(msg, 70 + off + i * mw, y + 57, { size: 58, font: 'Bebas Neue', ls: 6, color: fg });
+  ctx.restore();
+}
+function bannerB(s, t, t0, y = 790, blinkUntil = .8) {
+  if (t < t0) return; const blink = t < t0 + blinkUntil ? Math.floor(t * 8) % 2 : 1;
+  const w = measure(s, { size: 100 }) + 120;
+  ctx.fillStyle = blink ? C.white : C.black; ctx.fillRect(W / 2 - w / 2, y, w, 150);
+  txt(s, W / 2, y + 105, { size: 100, align: 'center', color: blink ? C.black : C.white });
+}
+function headerB(s, y, t, t0 = 0) {
+  const w = measure(s, { size: 72, font: 'Bebas Neue', ls: 24 }) * 1.12 + 140;
+  panel(W / 2 - w / 2, y, w, 100, prog(t, t0, t0 + .3));
+  if (t > t0 + .2) led(s, W / 2, y + 80, { size: 70, cell: 5, align: 'center', font: 'Bebas Neue', ls: 24, k: prog(t, t0 + .2, t0 + .5) });
+}
+const B = {
+  title(t, dur) {
+    frameB();
+    panel(W / 2 - 260, 170, 520, 110, prog(t, .1, .5));
+    if (t > .3) led(P.num, W / 2, 262, { size: 80, cell: 7, align: 'center', k: prog(t, .3, .7), font: 'Bebas Neue', ls: 20 });
+    led(P.name, W / 2, 620, { size: P.nameSize || 300, cell: P.cell || 12, align: 'center', k: prog(t, .5, 1.1) });
+    if (P.sub) txt(P.sub, W / 2, 760, { size: 70, font: 'Bebas Neue', ls: 14, align: 'center', color: C.offwhite, alpha: E.out(prog(t, 1.1, 1.5)) });
+    if (P.ticker) ticker(P.ticker, t, 1.4);
+    grain(t, .6); flashOut(t, dur);
+  },
+  alert(t, dur) {
+    frameB();
+    headerB(P.head, 150, t, .1);
+    led(P.big, W / 2, 560, { size: 260, cell: 11, align: 'center', k: prog(t, .5, 1.1) });
+    if (P.sub) txt(P.sub, W / 2, 680, { size: 80, align: 'center', alpha: E.out(prog(t, 1, 1.4)) });
+    bannerB(P.banner, t, P.tBanner || 2);
+    if (P.ticker) ticker(P.ticker, t, 1.2, 905 + 0, C.black, C.white);
+    grain(t, .6); flashOut(t, dur);
+  },
+  counter(t, dur) {
+    frameB();
+    if (P.head) headerB(P.head, 150, t, .1);
+    panel(360, 340, 1200, 300, prog(t, .3, .7));
+    if (t > .4) odo(P.n, W / 2, 570, 210, prog(t, .4, 2.2), { align: 'center' });
+    led(P.label, W / 2, 800, { size: 140, cell: 7, align: 'center', k: prog(t, 1.2, 1.7) });
+    if (P.sub) txt(P.sub, W / 2, 880, { size: 60, font: 'Bebas Neue', ls: 12, align: 'center', color: C.offwhite, alpha: E.out(prog(t, 1.7, 2.1)) });
+    if (P.banner) bannerB(P.banner, t, P.tBanner || 3, 750);
+    grain(t, .6); flashOut(t, dur);
+  },
+  vs(t, dur) {
+    frameB();
+    headerB(P.title, 130, t);
+    txt(P.l || 'PROMESSA', 480, 370, { size: 70, font: 'Bebas Neue', ls: 10, align: 'center', color: C.offwhite, alpha: E.out(prog(t, .4, .7)) });
+    txt(P.r || 'REALIDADE', 1440, 370, { size: 70, font: 'Bebas Neue', ls: 10, align: 'center', color: C.offwhite, alpha: E.out(prog(t, .6, .9)) });
+    panel(200, 400, 560, 230, prog(t, .5, .9)); panel(1160, 400, 560, 230, prog(t, .7, 1.1));
+    if (t > .7) odo(P.ln, 480, 580, 150, prog(t, .7, 1.8), { align: 'center' });
+    if (t > 1.2) odo(P.rn, 1440, 580, 150, prog(t, 1.2, 2.6), { align: 'center' });
+    led('X', W / 2, 590, { size: 150, cell: 10, align: 'center', k: prog(t, 1, 1.3) });
+    txt(P.ls, 480, 690, { size: 46, font: 'Bebas Neue', ls: 6, align: 'center', alpha: E.out(prog(t, 1.4, 1.8)) });
+    txt(P.rs, 1440, 690, { size: 46, font: 'Bebas Neue', ls: 6, align: 'center', alpha: E.out(prog(t, 2.4, 2.8)) });
+    if (P.banner) bannerB(P.banner, t, P.tBanner || 3.2);
+    grain(t, .6); flashOut(t, dur);
+  },
+  scores(t, dur) {
+    frameB();
+    headerB(P.title, 110, t);
+    P.rows.forEach(([h, hs, as, a, note], i) => {
+      const t0 = P.rowT ? P.rowT[i] : .5 + i * (P.step || .9), y = 280 + i * 210, k = prog(t, t0, t0 + .4);
+      panel(180, y, W - 360, 170, k); if (k <= 0) return;
+      txt(h, 640, y + 115, { size: 84, align: 'right', alpha: E.out(k) });
+      txt(a, 1280, y + 115, { size: 84, alpha: E.out(k) });
+      odo(hs, 790, y + 125, 110, prog(t, t0 + .2, t0 + 1), { align: 'center' });
+      odo(as, 1130, y + 125, 110, prog(t, t0 + .2, t0 + 1), { align: 'center' });
+      led('X', 960, y + 120, { size: 80, cell: 7, align: 'center', k: 1 });
+      if (note) txt(note, 960, y + 158, { size: 34, font: 'Bebas Neue', ls: 8, align: 'center', color: C.offwhite, alpha: E.out(prog(t, t0 + .6, t0 + 1)) });
+    });
+    grain(t, .6); flashOut(t, dur);
+  },
+  // seats grid: n of cap filled
+  fill(t, dur) {
+    frameB();
+    headerB(P.title, 120, t);
+    const cols = 20, rows = 8, cw = 52, ch = 46, x0 = 170, y0 = 300, tot = cols * rows, lit = Math.round(tot * P.n / P.cap);
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const idx = j * cols + i, on = idx < lit * E.out(prog(t, .8, 2)), seen = prog(t, .3 + idx * .004, .5 + idx * .004);
+      if (seen <= 0) continue; ctx.globalAlpha = seen;
+      ctx.fillStyle = on ? C.white : 'rgba(90,54,34,.6)';
+      if (on) { ctx.shadowColor = 'rgba(255,240,220,.6)'; ctx.shadowBlur = 12; }
+      rrect(x0 + i * cw, y0 + j * ch, cw - 10, ch - 12, 6); ctx.fill(); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    }
+    const rx = 1270; panel(rx, 300, 500, 360, prog(t, .6, 1));
+    if (t > .8) { txt(P.nLabel, rx + 250, 370, { size: 46, font: 'Bebas Neue', ls: 8, align: 'center', color: C.offwhite });
+      odo(P.n, rx + 250, 480, 100, prog(t, .9, 2), { align: 'center' });
+      txt(P.capLabel, rx + 250, 560, { size: 46, font: 'Bebas Neue', ls: 8, align: 'center', color: C.offwhite });
+      odo(P.cap, rx + 250, 640, 70, prog(t, 1.2, 2.2), { align: 'center' }); }
+    if (P.banner) bannerB(P.banner, t, P.tBanner || 3, 720);
+    grain(t, .6); flashOut(t, dur);
+  },
+  checklist(t, dur) {
+    frameB();
+    headerB(P.title, 110, t);
+    P.rows.forEach(([name, st, ok], i) => {
+      const col = i % 2, row = Math.floor(i / 2), x = 160 + col * 820, y = 270 + row * 170, t0 = .4 + i * (P.step || .35);
+      const k = prog(t, t0, t0 + .35); panel(x, y, 780, 140, k); if (k <= 0) return;
+      txt(name, x + 36, y + 90, { size: 54, alpha: E.out(k) });
+      const ks = prog(t, t0 + .3, t0 + .6);
+      if (ks > 0) { ctx.save(); ctx.globalAlpha = clamp(ks * 2);
+        ctx.fillStyle = ok ? C.white : 'transparent'; ctx.strokeStyle = C.white; ctx.lineWidth = 4;
+        rrect(x + 440, y + 30, 310, 80, 8); ok ? ctx.fill() : ctx.stroke();
+        mark(ok ? 'ok' : 'x', x + 478, y + 70, 40, E.out(ks), ok ? C.black : C.white, 8);
+        txt(st, x + 628, y + 88, { size: st.length > 10 ? 32 : 46, font: 'Bebas Neue', ls: 3, align: 'center', color: ok ? C.black : C.white }); ctx.restore(); }
+    });
+    grain(t, .6); flashOut(t, dur);
+  },
+  cta(t, dur) {
+    frameB();
+    txt(P.q1, W / 2, 230, { size: 70, align: 'center', alpha: E.out(prog(t, .2, .6)) });
+    txt(P.q2, W / 2, 320, { size: 70, align: 'center', alpha: E.out(prog(t, .5, .9)) });
+    const pick = P.tPulse || 2.6;
+    [['QUEBROU', 520], ['ESPERTO', 1400]].forEach(([s, x], i) => {
+      const k = prog(t, .9 + i * .4, 1.3 + i * .4); panel(x - 380, 430, 760, 330, k);
+      if (k > 0) led(s, x, 680, { size: 200, cell: 10, align: 'center', k: prog(t, 1 + i * .4, 1.5 + i * .4) });
+      const pulse = t > pick + i * .6 ? .5 + .5 * Math.sin((t - pick - i * .6) * 9) : 0;
+      if (pulse) { ctx.strokeStyle = `rgba(246,242,234,${pulse})`; ctx.lineWidth = 6; rrect(x - 395, 415, 790, 360, 20); ctx.stroke(); }
+    });
+    led('X', W / 2, 660, { size: 140, cell: 9, align: 'center', k: prog(t, 1.6, 1.9) });
+    ticker('COMENTA AÍ: QUEBROU OU ESPERTO   •   ', t, 1.8, 870);
+    grain(t, .6); flashOut(t, dur);
+  },
+};
+
+const [st, fn] = P.type.split('.');
+boot([{ dur: P.dur || 5, draw: (st === 'A' ? A : B)[fn] }]);
+</script></body></html>

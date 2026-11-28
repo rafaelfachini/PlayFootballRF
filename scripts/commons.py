@@ -18,7 +18,7 @@ prefix = sys.argv[4] if len(sys.argv) > 4 else re.sub(r'\W+', '_', q)[:30]
 os.makedirs(out, exist_ok=True)
 api = "https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode({
     "action": "query", "format": "json", "generator": "search", "gsrsearch": f"filetype:bitmap {q}",
-    "gsrnamespace": 6, "gsrlimit": n * 3, "prop": "imageinfo", "iiprop": "url|size|extmetadata", "iiurlwidth": 1920})
+    "gsrnamespace": 6, "gsrlimit": n * 3, "prop": "imageinfo", "iiprop": "url|size|extmetadata", "iiurlwidth": 1280})
 pages = sorted(get(api).get("query", {}).get("pages", {}).values(), key=lambda p: p.get("index", 0))
 meta_path = os.path.join(out, "credits.jsonl")
 got = 0
@@ -30,7 +30,7 @@ for p in pages:
     lic = em.get("LicenseShortName", {}).get("value", "")
     if not re.search(r"CC|Public domain|PD", lic, re.I):
         continue
-    url = ii.get("thumburl") or ii["url"]
+    url = ii["url"] if ii["width"] <= 4200 else ii.get("thumburl", ii["url"])
     ext = os.path.splitext(urllib.parse.urlparse(url).path)[1].lower() or ".jpg"
     fn = f"{prefix}_{got+1:02d}{ext}"
     open(os.path.join(out, fn), "wb").write(fetch(url))
