@@ -1,0 +1,7 @@
+audio/
+build/
+images/
+footage/*.mp4
+footage/*.webm
+deliverables/**/*.mp4
+node_modules/

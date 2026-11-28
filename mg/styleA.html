@@ -1,0 +1,109 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'Anton';src:url(fonts/Anton-Regular.ttf)}
+@font-face{font-family:'Bebas Neue';src:url(fonts/BebasNeue-Regular.ttf)}
+@font-face{font-family:'Archivo Black';src:url(fonts/ArchivoBlack-Regular.ttf)}
+html,body{margin:0;background:#000}canvas{display:block}
+</style></head><body><canvas id="c"></canvas>
+<script src="common.js"></script>
+<script>
+// STYLE A — "QUADRA": parquet marrom + linhas da quadra em branco + barras pretas
+const wood = makeWood(W + 300, H + 300, 11);
+
+function bg(t, dur, dark = 0) {
+  const z = 1 + t / dur * .05;
+  ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.drawImage(wood, -W / 2 - 150 - t * 6, -H / 2 - 150); ctx.restore();
+  if (dark) { ctx.fillStyle = `rgba(0,0,0,${dark})`; ctx.fillRect(0, 0, W, H); }
+}
+function courtLines(k, a = 1) {
+  ctx.save(); ctx.globalAlpha = .85 * a; ctx.strokeStyle = C.white; ctx.lineWidth = 10; ctx.lineCap = 'butt';
+  const L = 2600; ctx.setLineDash([L * k, L]);
+  ctx.beginPath(); ctx.arc(1500, 540, 330, -Math.PI / 2, Math.PI * 1.5); ctx.stroke();       // centre circle
+  ctx.beginPath(); ctx.moveTo(1500, -20); ctx.lineTo(1500, 1100); ctx.stroke();              // halfway line
+  ctx.setLineDash([]); ctx.globalAlpha = a * E.out(prog(k, .6, 1));
+  ctx.fillStyle = C.white; ctx.beginPath(); ctx.arc(1500, 540, 16, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function blackWipe(t, dur) { // exit wipe
+  const k = E.inOut(prog(t, dur - .45, dur));
+  if (k <= 0) return; ctx.fillStyle = C.black;
+  ctx.beginPath(); ctx.moveTo(-200, H); ctx.lineTo(-200 + k * 2600, H); ctx.lineTo(-200 + k * 2600 + 400, 0); ctx.lineTo(-200, 0); ctx.fill();
+}
+function enterWipe(t) {
+  const k = E.inOut(prog(t, 0, .45)); if (k >= 1) return; ctx.fillStyle = C.black;
+  ctx.beginPath(); ctx.moveTo(-200 + k * 2600, H); ctx.lineTo(2400, H); ctx.lineTo(2400, 0); ctx.lineTo(-200 + k * 2600 + 400, 0); ctx.fill();
+}
+
+const S1 = { dur: 5, draw(t, dur) {
+  bg(t, dur, .15); courtLines(E.inOut(prog(t, .2, 1.6)));
+  vignette(.7);
+  // giant outlined number
+  const kn = E.back(prog(t, .35, .95));
+  ctx.save(); ctx.translate(250, 640); ctx.scale(kn, kn);
+  txt('#1', 0, 0, { size: 520, color: null, stroke: C.white, lw: 6, align: 'center', alpha: .9 }); ctx.restore();
+  maskUp('LUSAIL', 520, 560, prog(t, .6, 1.2), { size: 240, ls: 6, shadow: 'rgba(0,0,0,.6)' });
+  // black slab
+  const ks = E.out5(prog(t, 1.0, 1.6));
+  ctx.fillStyle = C.black; ctx.fillRect(520 - 30, 610, ks * 900, 120);
+  ctx.fillStyle = C.brownLight; ctx.fillRect(520 - 30, 610, 14, 120 * ks);
+  ctx.save(); ctx.beginPath(); ctx.rect(490, 610, ks * 900, 120); ctx.clip();
+  const n = 88966 * E.out(prog(t, 1.2, 2.6));
+  txt(fmt(n), 520, 700, { size: 92, font: 'Anton' });
+  txt('LUGARES', 520 + measure('88.966', { size: 92 }) + 24, 698, { size: 70, font: 'Bebas Neue', ls: 4, color: C.offwhite });
+  ctx.restore();
+  maskUp('O MAIOR DO CATAR', 524, 800, prog(t, 1.6, 2.1), { size: 64, font: 'Bebas Neue', ls: 10, color: C.white });
+  grain(t); blackWipe(t, dur);
+}};
+
+const S2 = { dur: 5, draw(t, dur) {
+  bg(t, dur, .35); vignette(.85); enterWipe(t);
+  const k = E.out(prog(t, .4, 2.2));
+  txt('US$', 262, 420, { size: 100, font: 'Bebas Neue', ls: 6, alpha: E.out(prog(t, .4, .8)), color: C.offwhite });
+  const big = Math.round(220 * k);
+  txt(String(big), 250, 760, { size: 380, ls: 4, shadow: 'rgba(0,0,0,.6)' });
+  maskUp('BILHÕES', 262, 860, prog(t, .9, 1.4), { size: 110, font: 'Bebas Neue', ls: 14 });
+  txt('(ESTIMATIVA)', 266, 920, { size: 40, font: 'Bebas Neue', ls: 8, color: C.offwhite, alpha: E.out(prog(t, 1.3, 1.8)) });
+  // comparison bars
+  const bx = 1060, by1 = 470, by2 = 680, unit = 48;
+  const kb1 = E.out(prog(t, 1.4, 1.9)), kb2 = E.out5(prog(t, 1.9, 3.3));
+  txt('COPA 2014', bx, by1 - 20, { size: 46, font: 'Bebas Neue', ls: 6, alpha: kb1, color: C.offwhite });
+  ctx.fillStyle = C.white; ctx.globalAlpha = kb1; ctx.fillRect(bx, by1, unit * kb1, 90); ctx.globalAlpha = 1;
+  txt('CATAR 2022', bx, by2 - 20, { size: 46, font: 'Bebas Neue', ls: 6, alpha: kb1, color: C.offwhite });
+  ctx.fillStyle = C.black; ctx.fillRect(bx, by2, unit * 15 * kb2, 90);
+  ctx.strokeStyle = C.white; ctx.lineWidth = 3; ctx.strokeRect(bx, by2, unit * 15 * kb2, 90);
+  for (let i = 1; i < 15 * kb2; i++) { ctx.fillStyle = 'rgba(246,242,234,.25)'; ctx.fillRect(bx + i * unit, by2 + 10, 2, 70); }
+  const kx = E.back(prog(t, 3.1, 3.6));
+  ctx.save(); ctx.translate(bx + unit * 15 - 160, by2 + 230); ctx.scale(kx, kx); ctx.rotate(-.06);
+  ctx.fillStyle = C.white; ctx.fillRect(-150, -80, 300, 120);
+  txt('~15x', 0, 22, { size: 100, align: 'center', color: C.black }); ctx.restore();
+  txt('A COPA MAIS CARA DA HISTÓRIA', W / 2, 1010, { size: 44, font: 'Bebas Neue', ls: 12, align: 'center', alpha: E.out(prog(t, 3.5, 4)) });
+  grain(t); blackWipe(t, dur);
+}};
+
+const S3 = { dur: 5.5, draw(t, dur) {
+  bg(t, dur, .1);
+  const ks = E.inOut(prog(t, 0, .6));
+  ctx.fillStyle = C.black; ctx.fillRect(0, 0, W / 2 * ks, H);
+  ctx.fillStyle = C.white; ctx.fillRect(W / 2 * ks - 6, 0, 12, H);
+  vignette(.5);
+  { const ka = E.out(prog(t, .3, .7)); ctx.globalAlpha = ka; ctx.fillStyle = C.white; ctx.fillRect(W / 2 - 190, 60, 380, 90); ctx.globalAlpha = 1; txt('AL BAYT', W / 2 + 9, 130, { size: 70, font: 'Bebas Neue', ls: 18, align: 'center', color: C.black, alpha: ka }); }
+  maskUp('PROMESSA', W / 4, 300, prog(t, .5, 1), { size: 130, align: 'center', color: C.offwhite });
+  maskUp('32 MIL', W / 4, 560, prog(t, .8, 1.3), { size: 220, align: 'center' });
+  maskUp('LUGARES + HOTEL 5 ESTRELAS', W / 4, 650, prog(t, 1, 1.5), { size: 54, font: 'Bebas Neue', ls: 6, align: 'center', color: C.offwhite });
+  maskUp('REALIDADE', W * 3 / 4, 300, prog(t, 1.5, 2), { size: 130, align: 'center' });
+  const n = 61475 * E.out(prog(t, 1.8, 3.2));
+  txt(fmt(n), W * 3 / 4, 560, { size: 220, align: 'center', alpha: E.out(prog(t, 1.8, 2.1)), shadow: 'rgba(0,0,0,.7)' });
+  maskUp('PÚBLICO NA COPA ÁRABE 2025', W * 3 / 4, 650, prog(t, 2, 2.5), { size: 54, font: 'Bebas Neue', ls: 6, align: 'center', color: C.white });
+  // stamp
+  const kp = prog(t, 3.3, 3.7);
+  if (kp > 0) {
+    const sc = lerp(2.4, 1, E.out5(kp));
+    ctx.save(); ctx.translate(W / 4, 850); ctx.rotate(-.08); ctx.scale(sc, sc); ctx.globalAlpha = clamp(kp * 3);
+    ctx.strokeStyle = C.white; ctx.lineWidth = 8; ctx.strokeRect(-260, -70, 520, 140);
+    mark('x', -175, 0, 90, E.out(prog(t, 3.5, 3.9)), C.white, 14);
+    txt('NO PAPEL', 50, 28, { size: 88, align: 'center' }); ctx.restore();
+  }
+  grain(t); blackWipe(t, dur);
+}};
+boot([S1, S2, S3]);
+</script></body></html>

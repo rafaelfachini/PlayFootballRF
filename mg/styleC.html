@@ -1,0 +1,131 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'Anton';src:url(fonts/Anton-Regular.ttf)}
+@font-face{font-family:'Bebas Neue';src:url(fonts/BebasNeue-Regular.ttf)}
+@font-face{font-family:'Archivo Black';src:url(fonts/ArchivoBlack-Regular.ttf)}
+html,body{margin:0;background:#000}canvas{display:block}
+</style></head><body><canvas id="c"></canvas>
+<script src="common.js"></script>
+<script>
+// STYLE C — "RECORTE": editorial, placas de madeira diagonais, cartões de papel, tipografia cinética
+const wood = makeWood(W + 400, H + 400, 23, { plank: 54 });
+function base(t) {
+  ctx.fillStyle = C.black; ctx.fillRect(0, 0, W, H);
+  // faint court-line grid
+  ctx.strokeStyle = 'rgba(246,242,234,.04)'; ctx.lineWidth = 2;
+  for (let x = -H; x < W; x += 120) { ctx.beginPath(); ctx.moveTo(x + t * 20, H); ctx.lineTo(x + H + t * 20, 0); ctx.stroke(); }
+}
+// diagonal wood slab
+function slab(x0, k, wdt = 900, skew = 260) {
+  if (k <= 0) return;
+  ctx.save(); ctx.beginPath();
+  const x = lerp(-wdt - skew, x0, E.out5(k));
+  ctx.moveTo(x, H); ctx.lineTo(x + wdt, H); ctx.lineTo(x + wdt + skew, 0); ctx.lineTo(x + skew, 0); ctx.closePath();
+  ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 50; ctx.fillStyle = '#000'; ctx.fill(); ctx.shadowBlur = 0;
+  ctx.clip(); ctx.drawImage(wood, -200, -200); ctx.restore();
+}
+// paper strip with text
+function strip(s, x, y, k, o = {}) {
+  if (k <= 0) return;
+  const size = o.size || 120, pad = size * .28;
+  const w = measure(s, { size, font: o.font || 'Archivo Black', ls: o.ls || 0 }) + pad * 2;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0);
+  const sx = E.out5(k);
+  ctx.beginPath(); ctx.rect(0, -size * .95, w * sx, size * 1.25); ctx.clip();
+  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
+  ctx.fillStyle = o.bg || C.white; ctx.fillRect(0, -size * .95, w, size * 1.25); ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  txt(s, pad, size * .1, { size, font: o.font || 'Archivo Black', color: o.color || C.black, ls: o.ls || 0 });
+  ctx.restore();
+}
+function tape(x, y, rot, k) {
+  if (k <= 0) return; ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.globalAlpha = .8 * k;
+  ctx.fillStyle = '#cbbfae'; ctx.fillRect(-55, -18, 110, 36); ctx.restore();
+}
+function cut(t, dur) { // exit: slab sweeps across
+  const k = prog(t, dur - .5, dur); if (k <= 0) return;
+  ctx.save(); ctx.beginPath(); const x = lerp(-1400, W + 200, E.inOut(k));
+  ctx.moveTo(x, H); ctx.lineTo(x + 1400, H); ctx.lineTo(x + 1700, 0); ctx.lineTo(x + 300, 0); ctx.clip();
+  ctx.drawImage(wood, -200, -200); ctx.restore();
+}
+
+const S1 = { dur: 5, draw(t, dur) {
+  base(t); slab(-120, prog(t, 0, .6), 860);
+  const kn = E.out5(prog(t, .2, .8));
+  txt('01', 90 + (1 - kn) * -200, 800, { size: 600, font: 'Archivo Black', color: null, stroke: C.white, lw: 5, alpha: kn, ls: -20 });
+  strip('LUSAIL', 840, 470, prog(t, .6, 1.1), { size: 190, rot: -.03 });
+  tape(870, 330, -.4, prog(t, 1, 1.2));
+  strip('88.966 LUGARES', 880, 640, prog(t, 1.1, 1.5), { size: 86, bg: C.black, color: C.white, rot: .015, font: 'Anton', ls: 2 });
+  strip('O MAIOR DO CATAR', 900, 780, prog(t, 1.4, 1.8), { size: 70, bg: C.brownMid, color: C.white, rot: -.01, font: 'Anton', ls: 3 });
+  ctx.save(); ctx.globalAlpha = E.out(prog(t, 1.9, 2.4));
+  ctx.strokeStyle = C.white; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(900, 880); ctx.lineTo(900 + 700 * E.out(prog(t, 1.9, 2.6)), 880); ctx.stroke();
+  txt('PALCO DA FINAL DE 2022', 900, 940, { size: 46, font: 'Bebas Neue', ls: 12, color: C.offwhite });
+  ctx.restore();
+  vignette(.5); grain(t); cut(t, dur);
+}};
+
+const S2 = { dur: 5, draw(t, dur) {
+  ctx.drawImage(wood, -200 - t * 10, -200); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, 0, W, H);
+  // kinetic slam: each word drops in, scale from 3x
+  const w220 = measure('220', { size: 360, font: 'Archivo Black', ls: -4 });
+  const words = [['US$', 300, 360, 120, .1], ['220', 300, 700, 360, .35], ['BILHÕES', 330 + w220, 700, 140, .7]];
+  words.forEach(([s, x, y, size, a]) => {
+    const k = prog(t, a, a + .25); if (k <= 0) return;
+    const sc = lerp(3, 1, E.out5(k));
+    ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.globalAlpha = clamp(k * 2);
+    txt(s, 0, 0, { size, font: 'Archivo Black', shadow: 'rgba(0,0,0,.6)', ls: -4 }); ctx.restore();
+  });
+  // shake on impact
+  strip('ESTIMATIVA', 340 + w220, 520, prog(t, 1.1, 1.4), { size: 60, rot: -.04, font: 'Anton', ls: 4 });
+  // 1 stadium vs 15 stadiums icons
+  const ky = prog(t, 1.8, 2.2);
+  if (ky > 0) {
+    ctx.fillStyle = `rgba(10,9,8,${.85 * E.out(ky)})`; ctx.fillRect(0, 840, W, 240);
+    txt('2014', 160, 960, { size: 60, font: 'Anton', alpha: ky });
+    icon(330, 975, 1);
+    txt('2022', 560, 960, { size: 60, font: 'Anton', alpha: ky });
+    for (let i = 0; i < 15; i++) icon(730 + i * 74, 975, E.back(prog(t, 2.1 + i * .07, 2.4 + i * .07)));
+  }
+  const kx = prog(t, 3.4, 3.7);
+  if (kx > 0) { ctx.save(); ctx.translate(1700, 330); ctx.rotate(.12); ctx.scale(E.back(kx), E.back(kx));
+    ctx.fillStyle = C.white; ctx.beginPath(); ctx.arc(0, 0, 130, 0, 7); ctx.fill();
+    txt('15x', 0, 45, { size: 120, font: 'Archivo Black', align: 'center', color: C.black, ls: -4 }); ctx.restore(); }
+  vignette(.6); grain(t); cut(t, dur);
+}};
+function icon(x, y, k) { // tiny stadium glyph
+  if (k <= 0) return; ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
+  ctx.fillStyle = C.white; ctx.beginPath(); ctx.ellipse(0, 0, 30, 22, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = C.brownMid; ctx.beginPath(); ctx.ellipse(0, 0, 18, 11, 0, 0, 7); ctx.fill(); ctx.restore();
+}
+
+const S3 = { dur: 5.5, draw(t, dur) {
+  base(t); slab(980, prog(t, 0, .5), 1100, 200);
+  txt('AL BAYT', 120, 160, { size: 80, font: 'Archivo Black', alpha: E.out(prog(t, .2, .5)), ls: -2 });
+  ctx.fillStyle = C.white; ctx.fillRect(120, 185, 330 * E.out(prog(t, .3, .7)), 8);
+  // promise card (paper)
+  const kc = E.back(prog(t, .5, 1));
+  ctx.save(); ctx.translate(520, 600); ctx.rotate(-.05); ctx.scale(kc, kc);
+  ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;
+  ctx.fillStyle = C.white; ctx.fillRect(-330, -260, 660, 520); ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  txt('PROMESSA', -280, -170, { size: 54, font: 'Anton', color: C.brownMid, ls: 6 });
+  txt('32 MIL', -285, 30, { size: 200, font: 'Archivo Black', color: C.black, ls: -8 });
+  txt('LUGARES', -280, 110, { size: 60, font: 'Anton', color: C.black, ls: 4 });
+  txt('+ HOTEL 5 ESTRELAS', -280, 190, { size: 60, font: 'Anton', color: C.black, ls: 2 });
+  ctx.restore(); tape(520, 335, .08, prog(t, .9, 1.1));
+  // reality
+  txt('REALIDADE', 1180, 380, { size: 64, font: 'Anton', ls: 8, alpha: E.out(prog(t, 1.4, 1.7)), shadow: 'rgba(0,0,0,.7)' });
+  const n = 61475 * E.out(prog(t, 1.5, 2.8));
+  txt(fmt(n), 1170, 600, { size: 230, font: 'Archivo Black', ls: -8, alpha: E.out(prog(t, 1.5, 1.7)), shadow: 'rgba(0,0,0,.8)' });
+  strip('COPA ÁRABE 2025', 1180, 720, prog(t, 2.2, 2.6), { size: 64, bg: C.black, color: C.white, font: 'Anton', ls: 4, rot: .02 });
+  // stamp over the card
+  const kp = prog(t, 3.2, 3.5);
+  if (kp > 0) {
+    const sc = lerp(2.6, 1, E.out5(kp));
+    ctx.save(); ctx.translate(560, 640); ctx.rotate(-.22); ctx.scale(sc, sc); ctx.globalAlpha = clamp(kp * 3) * .92;
+    ctx.strokeStyle = C.brownMid; ctx.lineWidth = 12; rrect(-300, -85, 600, 170, 10); ctx.stroke();
+    txt('NO PAPEL', 0, 45, { size: 120, font: 'Archivo Black', align: 'center', color: C.brownMid, ls: -2 });
+    ctx.restore();
+  }
+  vignette(.5); grain(t); cut(t, dur);
+}};
+boot([S1, S2, S3]);
+</script></body></html>

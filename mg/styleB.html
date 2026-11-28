@@ -1,0 +1,143 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'Anton';src:url(fonts/Anton-Regular.ttf)}
+@font-face{font-family:'Bebas Neue';src:url(fonts/BebasNeue-Regular.ttf)}
+@font-face{font-family:'Archivo Black';src:url(fonts/ArchivoBlack-Regular.ttf)}
+html,body{margin:0;background:#000}canvas{display:block}
+</style></head><body><canvas id="c"></canvas>
+<script src="common.js"></script>
+<script>
+// STYLE B — "PLACAR": painel de estádio (LED branco) em moldura de madeira marrom
+const wood = makeWood(W, 260, 5);
+const [dotC, dotG] = mk(W, H);
+// LED dot text: rasterise text small then draw as dots. k = power-on (0..1), cell = dot pitch
+function led(s, x, y, o = {}) {
+  const cell = o.cell || 10, size = o.size || 200, k = o.k ?? 1;
+  const f = `${size / cell}px ${o.font || 'Anton'}`;
+  dotG.setTransform(1, 0, 0, 1, 0, 0); dotG.clearRect(0, 0, 400, 200);
+  dotG.font = f; dotG.letterSpacing = ((o.ls || 0) / cell) + 'px';
+  const w = Math.ceil(dotG.measureText(s).width) + 2, h = Math.ceil(size / cell * 1.25);
+  dotG.fillStyle = '#fff'; dotG.textBaseline = 'alphabetic'; dotG.fillText(s, 1, Math.round(size / cell));
+  const id = dotG.getImageData(0, 0, w, h).data;
+  const ox = o.align === 'center' ? x - w * cell / 2 : o.align === 'right' ? x - w * cell : x;
+  const oy = y - size;
+  const r = rng(99);
+  ctx.save();
+  if (o.glow !== false) { ctx.shadowColor = 'rgba(255,240,220,.55)'; ctx.shadowBlur = 14; }
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const a = id[(j * w + i) * 4 + 3];
+    const on = a > 110 && (r() < k * 1.15 || k >= 1) && (i / w) <= (o.wipe ?? 1);
+    if (!on) continue;
+    ctx.fillStyle = o.color || C.white;
+    ctx.beginPath(); ctx.arc(ox + i * cell + cell / 2, oy + j * cell + cell / 2, cell * .38, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+  return w * cell;
+}
+function frame(t) {
+  ctx.fillStyle = C.black; ctx.fillRect(0, 0, W, H);
+  // unlit dot grid
+  ctx.fillStyle = 'rgba(90,54,34,.28)';
+  for (let y = 95; y < H - 95; y += 14) for (let x = 95; x < W - 95; x += 14) ctx.fillRect(x, y, 3, 3);
+  // wooden frame
+  ctx.save(); ctx.lineWidth = 0;
+  const p = ctx.createPattern(wood, 'repeat');
+  ctx.fillStyle = p; ctx.fillRect(0, 0, W, 70); ctx.fillRect(0, H - 70, W, 70); ctx.fillRect(0, 0, 70, H); ctx.fillRect(W - 70, 0, 70, H);
+  ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 6; ctx.strokeRect(70, 70, W - 140, H - 140);
+  ctx.strokeStyle = 'rgba(246,242,234,.12)'; ctx.lineWidth = 2; ctx.strokeRect(78, 78, W - 156, H - 156);
+  ctx.restore();
+}
+function panel(x, y, w, h, k) {
+  ctx.save(); ctx.globalAlpha = E.out(k);
+  ctx.fillStyle = 'rgba(36,20,11,.85)'; rrect(x, y, w, h * E.out5(k), 14); ctx.fill();
+  ctx.strokeStyle = C.brownLight; ctx.lineWidth = 3; ctx.stroke(); ctx.restore();
+}
+// odometer digits
+function odo(n, x, y, size, k, o = {}) {
+  const s = fmt(n); let cx = x; const dw = measure('0', { size, font: 'Anton' }) + 6;
+  const total = o.align === 'center' ? [...s].reduce((a, ch) => a + (/\d/.test(ch) ? dw : dw * .45), 0) : 0;
+  cx -= total / 2;
+  [...s].forEach((ch, i) => {
+    if (!/\d/.test(ch)) { txt(ch, cx, y, { size, color: C.white }); cx += dw * .45; return; }
+    const d = Number(ch); const kk = E.out5(clamp(k * 1.4 - i * .06));
+    const roll = d + (1 - kk) * (10 + i * 3);
+    ctx.save(); ctx.beginPath(); ctx.rect(cx - 4, y - size * 1.02, dw, size * 1.2); ctx.clip();
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(cx - 4, y - size * 1.02, dw - 4, size * 1.2);
+    for (let q = Math.floor(roll) - 1; q <= Math.floor(roll) + 1; q++) {
+      const off = (q - roll) * size * 1.15;
+      txt(String(((q % 10) + 10) % 10), cx + dw / 2 - 5, y + off, { size, align: 'center' });
+    }
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(cx - 4, y - size * .42, dw - 4, 3);
+    ctx.restore(); cx += dw;
+  });
+}
+function flashOut(t, dur) { const k = prog(t, dur - .3, dur); if (k > 0) { ctx.fillStyle = `rgba(0,0,0,${k})`; ctx.fillRect(0, 0, W, H); } }
+
+const S1 = { dur: 5, draw(t, dur) {
+  frame(t);
+  panel(160, 150, 520, 110, prog(t, .1, .5));
+  if (t > .3) led('ESTÁDIO #1', 420, 245, { size: 80, cell: 7, align: 'center', k: prog(t, .3, .7), font: 'Bebas Neue', ls: 20 });
+  led('LUSAIL', W / 2, 610, { size: 330, cell: 12, align: 'center', k: prog(t, .5, 1.1) });
+  panel(360, 700, 1200, 170, prog(t, 1.1, 1.5));
+  if (t > 1.2) {
+    txt('LUGARES', 410, 812, { size: 62, font: 'Bebas Neue', ls: 8, color: C.offwhite, alpha: E.out(prog(t, 1.2, 1.5)) });
+    odo(88966, 760, 830, 120, prog(t, 1.3, 2.8));
+  }
+  // ticker
+  const tk = prog(t, 2.3, 2.6);
+  if (tk > 0) {
+    ctx.save(); ctx.globalAlpha = tk; ctx.fillStyle = C.white; ctx.fillRect(70, 905, W - 140, 74);
+    ctx.beginPath(); ctx.rect(70, 905, W - 140, 74); ctx.clip();
+    const msg = 'O MAIOR DO CATAR   •   FINAL DA COPA 2022   •   FACHADA DOURADA   •   ';
+    const mw = measure(msg, { size: 58, font: 'Bebas Neue', ls: 6 });
+    const off = -((t - 2.3) * 260) % mw;
+    for (let i = 0; i < 3; i++) txt(msg, 1300 + off + i * mw - mw, 962, { size: 58, font: 'Bebas Neue', ls: 6, color: C.black });
+    ctx.restore();
+  }
+  grain(t, .6); flashOut(t, dur);
+}};
+
+const S2 = { dur: 5, draw(t, dur) {
+  frame(t);
+  led('US$ 220 BI', W / 2, 470, { size: 300, cell: 12, align: 'center', k: prog(t, .1, .8) });
+  txt('ESTIMATIVA', W / 2, 545, { size: 50, font: 'Bebas Neue', ls: 16, align: 'center', color: C.offwhite, alpha: E.out(prog(t, .8, 1.2)) });
+  // segmented LED bars
+  const seg = 44, gap = 8, x0 = 520;
+  const rows = [['2014', 1, 1.2, 1.5, 680], ['2022', 15, 1.5, 3.0, 820]];
+  rows.forEach(([lab, n, a, b, y]) => {
+    txt(lab, 300, y + 52, { size: 80, alpha: E.out(prog(t, a - .2, a)) });
+    for (let i = 0; i < 16; i++) {
+      const lit = i < n * E.out(prog(t, a, b));
+      ctx.fillStyle = lit ? C.white : 'rgba(90,54,34,.45)';
+      if (lit) { ctx.shadowColor = 'rgba(255,240,220,.6)'; ctx.shadowBlur = 16; }
+      ctx.fillRect(x0 + i * (seg + gap), y, seg, 64); ctx.shadowBlur = 0;
+    }
+  });
+  const kx = prog(t, 3.1, 3.4);
+  if (kx > 0 && (Math.floor(t * 6) % 2 === 0 || t > 3.8)) led('15x', 1420, 880, { size: 230, cell: 10, k: 1 });
+  grain(t, .6); flashOut(t, dur);
+}};
+
+const S3 = { dur: 5.5, draw(t, dur) {
+  frame(t);
+  panel(660, 130, 600, 100, prog(t, 0, .3));
+  if (t > .2) led('AL BAYT', W / 2, 212, { size: 72, cell: 6, align: 'center', font: 'Bebas Neue', ls: 24, k: prog(t, .2, .5) });
+  // match-style scoreline
+  txt('PROMESSA', 480, 370, { size: 70, font: 'Bebas Neue', ls: 10, align: 'center', color: C.offwhite, alpha: E.out(prog(t, .4, .7)) });
+  txt('REALIDADE', 1440, 370, { size: 70, font: 'Bebas Neue', ls: 10, align: 'center', color: C.offwhite, alpha: E.out(prog(t, .6, .9)) });
+  panel(200, 400, 560, 230, prog(t, .5, .9)); panel(1160, 400, 560, 230, prog(t, .7, 1.1));
+  if (t > .7) odo(32000, 480, 580, 150, prog(t, .7, 1.8), { align: 'center' });
+  if (t > 1.2) odo(61475, 1440, 580, 150, prog(t, 1.2, 2.6), { align: 'center' });
+  led('X', W / 2, 590, { size: 150, cell: 10, align: 'center', k: prog(t, 1, 1.3) });
+  txt('LUGARES + HOTEL 5★', 480, 690, { size: 46, font: 'Bebas Neue', ls: 6, align: 'center', alpha: E.out(prog(t, 1.4, 1.8)) });
+  txt('PÚBLICO • COPA ÁRABE 2025', 1440, 690, { size: 46, font: 'Bebas Neue', ls: 6, align: 'center', alpha: E.out(prog(t, 2.4, 2.8)) });
+  const kb = prog(t, 3.2, 3.4);
+  if (kb > 0) {
+    const blink = t < 4 ? Math.floor(t * 8) % 2 : 1;
+    ctx.fillStyle = blink ? C.white : C.black; ctx.fillRect(460, 790, 1000, 150);
+    txt('PROMESSA NO PAPEL', W / 2, 895, { size: 100, align: 'center', color: blink ? C.black : C.white });
+  }
+  grain(t, .6); flashOut(t, dur);
+}};
+boot([S1, S2, S3]);
+</script></body></html>
